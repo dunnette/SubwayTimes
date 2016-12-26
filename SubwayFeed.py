@@ -1,17 +1,34 @@
 from google.transit import gtfs_realtime_pb2
 import urllib
 import datetime
+import zipfile
+import StringIO
+import csv
 
 # http://datamine.mta.info/sites/all/files/pdfs/GTFS-Realtime-NYC-Subway%20version%201%20dated%207%20Sep.pdf
 # http://datamine.mta.info/list-of-feeds
 
 class SubwayFeed:
     endpoint_url = 'http://datamine.mta.info/mta_esi.php'
+    static_data_cache = '/Users/dunnette/Downloads/google_transit.zip'
+    static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
     
     def __init__(self, key_str, feed_id_int):
         self.refresh_feed(key_str, feed_id_int)
         self.process_feed()
         self.process_stations()
+    
+    def get_stop_names(self, refresh = False):
+        if refresh:
+            url = urllib.urlopen(self.static_data_url)
+            f = StringIO.StringIO(url.read())
+        else:
+            f = self.static_data_cache
+        reader = csv.DictReader(zipfile.ZipFile(f).open('stops.txt'))
+        stop_names = dict()
+        for row in reader:
+            stop_names[row['stop_id']] = row['stop_name']
+        self.stop_names = stop_names
     
     def refresh_feed(self, key_str, feed_id_int):
         payload  = urllib.urlencode({'key': key_str, 'feed_id': feed_id_int})
