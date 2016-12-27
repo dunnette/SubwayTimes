@@ -19,7 +19,9 @@ class GTFS_Ingestor:
         if regen_trips:
             self.initialize_trip_updates_table()
     
-    def update_trip_updates(self, feed_id = 2):
+    def update_trip_updates(self, feed_id = 2, replace = False):
+        if replace:
+            self.initialize_trip_updates_table()
         self.load_feed(feed_id)
         self.split_feed()
         self.populate_trip_updates_table()
