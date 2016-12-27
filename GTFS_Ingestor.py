@@ -7,38 +7,34 @@ import csv
 import sqlite3
 
 class GTFS_Ingestor:
-    endpoint_url = 'http://datamine.mta.info/mta_esi.php'
-    static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
-    sqlite_db = 'subway_status.db'
+    _endpoint_url = 'http://datamine.mta.info/mta_esi.php'
+    _static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
+    _sqlite_db = 'subway_status.db'
     
     def __init__(self, key_str, regen_stops = False, regen_trips = False):
-        self.key_str = key_str
+        self._key_str = key_str
         if regen_stops:
             self.initialize_stops_table()
-            self.populate_stops_table()
         if regen_trips:
             self.initialize_trip_updates_table()
     
-    def update_trip_updates(self, feed_id = 2, replace = False):
-        if replace:
-            self.initialize_trip_updates_table()
-        self.load_feed(feed_id)
-        self.split_feed()
-        self.populate_trip_updates_table()
+    def initialize_feed(self, feed_id = 2):
+        self._load_feed(feed_id)
+        self._split_feed()
     
-    def load_feed(self, feed_id_int):
-        payload  = urllib.urlencode({'key': self.key_str, 'feed_id': feed_id_int})
-        response = urllib.urlopen('{}?{}'.format(self.endpoint_url, payload))
-        self.feed = gtfs_realtime_pb2.FeedMessage()
-        self.feed.ParseFromString(response.read())
+    def _load_feed(self, feed_id_int):
+        payload  = urllib.urlencode({'key': self._key_str, 'feed_id': feed_id_int})
+        response = urllib.urlopen('{}?{}'.format(self._endpoint_url, payload))
+        self._feed = gtfs_realtime_pb2.FeedMessage()
+        self._feed.ParseFromString(response.read())
         
-    def split_feed(self):
-        self.trip_updates = [tu for tu in self.feed.entity if tu.HasField('trip_update')]
-        self.vehicles = [tu for tu in self.feed.entity if tu.HasField('vehicle')]
-        self.header = self.feed.header
+    def _split_feed(self):
+        self._trip_updates = [tu for tu in self._feed.entity if tu.HasField('trip_update')]
+        self._vehicles = [tu for tu in self._feed.entity if tu.HasField('vehicle')]
+        self._header = self._feed.header
         
-    def drop_table(self, table_name):
-        connection = sqlite3.connect(self.sqlite_db)
+    def _drop_table(self, table_name):
+        connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         sql_command = 'DROP TABLE {};'.format(table_name)
         cursor.execute(sql_command)
@@ -47,13 +43,14 @@ class GTFS_Ingestor:
         
     def initialize_stops_table(self):
         try:
-            self.drop_table('stops')
+            self._drop_table('stops')
         except:
             pass
-        self.create_stops_table()
+        self._create_stops_table()
+        self._populate_stops_table()
     
-    def create_stops_table(self):
-        connection = sqlite3.connect(self.sqlite_db)
+    def _create_stops_table(self):
+        connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         sql_command = """
         CREATE TABLE stops ( 
@@ -72,11 +69,11 @@ class GTFS_Ingestor:
         connection.commit()
         connection.close()
         
-    def populate_stops_table(self):
-        url = urllib.urlopen(self.static_data_url)
+    def _populate_stops_table(self):
+        url = urllib.urlopen(self._static_data_url)
         f = StringIO.StringIO(url.read())
         reader = csv.DictReader(zipfile.ZipFile(f).open('stops.txt'))
-        connection = sqlite3.connect(self.sqlite_db)
+        connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         update_time = datetime.datetime.now()
         for row in reader:
@@ -111,13 +108,14 @@ class GTFS_Ingestor:
         
     def initialize_trip_updates_table(self):
         try:
-            self.drop_table('trip_updates')
+            self._drop_table('trip_updates')
         except:
             pass
-        self.create_trip_updates_table()
+        self._create_trip_updates_table()
+        self._populate_trip_updates_table()
             
-    def create_trip_updates_table(self):
-        connection = sqlite3.connect(self.sqlite_db)
+    def _create_trip_updates_table(self):
+        connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         sql_command = """
         CREATE TABLE trip_updates ( 
@@ -136,12 +134,13 @@ class GTFS_Ingestor:
         connection.commit()
         connection.close()
         
-    def populate_trip_updates_table(self):
-        connection = sqlite3.connect(self.sqlite_db)
+    def _populate_trip_updates_table(self):
+        self.initialize_feed()
+        connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         update_time = datetime.datetime.now()
 
-        for entity in self.trip_updates:
+        for entity in self._trip_updates:
             for stu in entity.trip_update.stop_time_update:
                 sql_command = """INSERT INTO trip_updates (
                 entity_id, 
@@ -165,10 +164,16 @@ class GTFS_Ingestor:
                     stu.schedule_relationship, 
                     stu.arrival.time if stu.arrival.time > 0 else 'NULL', 
                     stu.departure.time if stu.departure.time > 0 else 'NULL',
-                    self.header.timestamp,
+                    self._header.timestamp,
                     update_time
                 )
                 cursor.execute(sql_command)
 
         connection.commit()
         connection.close()
+        
+    def update_trip_updates_table(self, replace = False):
+        if replace:
+            self.initialize_trip_updates_table()
+        else:
+            self._populate_trip_updates_table()
