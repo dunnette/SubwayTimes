@@ -11,8 +11,18 @@ class GTFS_Ingestor:
     static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
     sqlite_db = 'subway_status.db'
     
-    def __init__(self, key_str):
+    def __init__(self, key_str, regen_stops = False, regen_trips = False):
         self.key_str = key_str
+        if regen_stops:
+            self.initialize_stops_table()
+            self.populate_stops_table()
+        if regen_trips:
+            self.initialize_trip_updates_table()
+    
+    def update_trip_updates(self, feed_id = 2):
+        self.load_feed(feed_id)
+        self.split_feed()
+        self.populate_trip_updates_table()
     
     def load_feed(self, feed_id_int):
         payload  = urllib.urlencode({'key': self.key_str, 'feed_id': feed_id_int})
@@ -25,6 +35,21 @@ class GTFS_Ingestor:
         self.vehicles = [tu for tu in self.feed.entity if tu.HasField('vehicle')]
         self.header = self.feed.header
         
+    def drop_table(self, table_name):
+        connection = sqlite3.connect(self.sqlite_db)
+        cursor = connection.cursor()
+        sql_command = 'DROP TABLE {};'.format(table_name)
+        cursor.execute(sql_command)
+        connection.commit()
+        connection.close()
+        
+    def initialize_stops_table(self):
+        try:
+            self.drop_table('stops')
+        except:
+            pass
+        self.create_stops_table()
+    
     def create_stops_table(self):
         connection = sqlite3.connect(self.sqlite_db)
         cursor = connection.cursor()
@@ -44,15 +69,6 @@ class GTFS_Ingestor:
         cursor.execute(sql_command)
         connection.commit()
         connection.close()
-        
-    def replace_stops_table(self):
-        connection = sqlite3.connect(self.sqlite_db)
-        cursor = connection.cursor()
-        sql_command = 'DROP TABLE stops;'
-        cursor.execute(sql_command)
-        connection.commit()
-        connection.close()
-        self.create_stops_table()
         
     def populate_stops_table(self):
         url = urllib.urlopen(self.static_data_url)
@@ -91,15 +107,13 @@ class GTFS_Ingestor:
         connection.commit()
         connection.close()
         
-    def replace_trip_updates_table(self):
-        connection = sqlite3.connect(self.sqlite_db)
-        cursor = connection.cursor()
-        sql_command = 'DROP TABLE trip_updates;'
-        cursor.execute(sql_command)
-        connection.commit()
-        connection.close()
+    def initialize_trip_updates_table(self):
+        try:
+            self.drop_table('trip_updates')
+        except:
+            pass
         self.create_trip_updates_table()
-        
+            
     def create_trip_updates_table(self):
         connection = sqlite3.connect(self.sqlite_db)
         cursor = connection.cursor()
