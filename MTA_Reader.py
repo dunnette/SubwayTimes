@@ -4,6 +4,13 @@ import datetime
 class MTA_Reader:
     _sqlite_db = 'subway_status.db'
     
+    def get_closest_stations(self, lat_lon, n = 10):
+        connection = sqlite3.connect(self._sqlite_db)
+        cursor = connection.cursor()
+        sql_command = "select stop_id from stops order by abs((stop_lat - {lat}) * (stop_lat - {lat}) + (stop_lon - {lon}) * (stop_lon - {lon})) limit {lim};".format(lat = lat_lon[0], lon=lat_lon[1], lim = n)
+        cursor.execute(sql_command) 
+        return cursor.fetchall()
+    
     def time_to_next_arrival(self, stop_id):
         return (sorted(self.get_stop_times(stop_id))[0] - datetime.datetime.now()).total_seconds()
     
