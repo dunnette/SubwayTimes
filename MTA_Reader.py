@@ -37,3 +37,11 @@ class MTA_Reader:
         cursor.execute(sql_command) 
         return [r[0] for r in cursor.fetchall()]
         connection.close()
+        
+    def get_stops_by_route(self, route_id):
+        connection = sqlite3.connect(self._sqlite_db)
+        cursor = connection.cursor()
+        sql_command = "select distinct stop_id from trip_updates where route_id = '{}';".format(route_id)
+        cursor.execute(sql_command) 
+        return [r[0] for r in cursor.fetchall()]
+        connection.close()
