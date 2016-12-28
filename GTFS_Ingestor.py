@@ -11,12 +11,14 @@ class GTFS_Ingestor:
     _static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
     _sqlite_db = 'subway_status.db'
     
-    def __init__(self, key_str, regen_stops = False, regen_trips = False):
+    def __init__(self, key_str, regen_stops = False, regen_trip_updates = False, regen_vehicles = False):
         self._key_str = key_str
         if regen_stops:
             self.initialize_stops_table()
-        if regen_trips:
+        if regen_trip_updates:
             self.initialize_trip_updates_table()
+        if regen_vehicles:
+            self.initialize_vehicles_table()
     
     def initialize_feed(self, feed_id = 2):
         self._load_feed(feed_id)
