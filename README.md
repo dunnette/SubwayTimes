@@ -7,7 +7,7 @@ A simple interface to cache MTA realtime results in a SQLite database.
 
 Generate SQLite database.
 ```python
-g = GTFS_Ingestor(##API_KEY##, regen_stops = True, regen_trip_updates = True, regen_vehicles = True)
+g = GTFS_Ingestor('##API_KEY##', regen_stops = True, regen_trip_updates = True, regen_vehicles = True)
 ```
 
 Update SQLite database
