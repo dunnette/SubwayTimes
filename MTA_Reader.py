@@ -7,7 +7,7 @@ class MTA_Reader:
     def get_closest_stations(self, lat_lon, n = 10):
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        sql_command = "select stop_id from stops order by abs((stop_lat - {lat}) * (stop_lat - {lat}) + (stop_lon - {lon}) * (stop_lon - {lon})) limit {lim};".format(lat = lat_lon[0], lon=lat_lon[1], lim = n)
+        sql_command = "select stop_id from stops where parent_station is null order by abs((stop_lat - {lat}) * (stop_lat - {lat}) + (stop_lon - {lon}) * (stop_lon - {lon})) limit {lim};".format(lat = lat_lon[0], lon=lat_lon[1], lim = n)
         cursor.execute(sql_command) 
         return cursor.fetchall()
     
