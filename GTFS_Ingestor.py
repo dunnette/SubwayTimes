@@ -108,7 +108,74 @@ class GTFS_Ingestor:
             cursor.execute(sql_command)
         connection.commit()
         connection.close()
+    
+    def initialize_vehicles_table(self):
+        try:
+            self._drop_table('vehicles')
+        except:
+            pass
+        self._create_vehicles_table()
+        self._populate_vehicles_table()
         
+    def _create_vehicles_table(self):
+        connection = sqlite3.connect(self._sqlite_db)
+        cursor = connection.cursor()
+        sql_command = """
+        CREATE TABLE vehicles ( 
+        entity_id INTEGER NOT NULL, 
+        trip_id TEXT NOT NULL, 
+        trip_start_date TEXT NOT NULL, 
+        route_id TEXT NOT NULL, 
+        current_stop_sequence INTEGER NOT NULL,
+        current_status INTEGER NOT NULL,
+        status_update_time INTEGER NOT NULL,
+        load_ts INTEGER NOT NULL,
+        update_ts TEXT NOT NULL);"""
+        cursor.execute(sql_command)
+        connection.commit()
+        connection.close()
+        
+    def _populate_vehicles_table(self):
+        self.initialize_feed()
+        connection = sqlite3.connect(self._sqlite_db)
+        cursor = connection.cursor()
+        update_time = datetime.datetime.now()
+        
+        def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
+        
+        for entity in self._vehicles:
+            sql_command = """INSERT INTO vehicles (
+            entity_id, 
+            trip_id, 
+            trip_start_date, 
+            route_id, 
+            current_stop_sequence, 
+            current_status, 
+            status_update_time, 
+            load_ts, 
+            update_ts
+            ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {});""".format(
+                int(entity.id), 
+                wrap_text(entity.vehicle.trip.trip_id),
+                wrap_text(datetime.datetime.strptime(entity.vehicle.trip.start_date,'%Y%m%d')),
+                wrap_text(entity.vehicle.trip.route_id), 
+                entity.vehicle.current_stop_sequence, 
+                entity.vehicle.current_status, 
+                wrap_text(entity.vehicle.timestamp, q = ''),
+                wrap_text(self._header.timestamp, q = ''),
+                wrap_text(update_time)
+            )
+            cursor.execute(sql_command)
+
+        connection.commit()
+        connection.close()
+        
+    def update_vehicles_table(self, replace = False):
+        if replace:
+            self.initialize_vehicles_table()
+        else:
+            self._populate_vehicles_table()
+
     def initialize_trip_updates_table(self):
         try:
             self._drop_table('trip_updates')
@@ -131,7 +198,7 @@ class GTFS_Ingestor:
         schedule_relationship INTEGER NOT NULL,
         arrival_time INTEGER,
         departure_time INTEGER,
-        load_ts TEXT NOT NULL,
+        load_ts INTEGER NOT NULL,
         update_ts TEXT NOT NULL);"""
         cursor.execute(sql_command)
         connection.commit()
