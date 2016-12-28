@@ -68,7 +68,7 @@ class GTFS_Ingestor:
         cursor.execute(sql_command)
         connection.commit()
         connection.close()
-        
+    
     def _populate_stops_table(self):
         url = urllib.urlopen(self._static_data_url)
         f = StringIO.StringIO(url.read())
@@ -76,6 +76,9 @@ class GTFS_Ingestor:
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         update_time = datetime.datetime.now()
+        
+        def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
+        
         for row in reader:
             sql_command = """INSERT INTO stops (
             stop_id,
@@ -89,18 +92,18 @@ class GTFS_Ingestor:
             location_type,
             parent_station,
             update_ts
-            ) VALUES ('{}', '{}', "{}", '{}', {}, {}, '{}', '{}', '{}', '{}', '{}');""".format(
-                row['stop_id'], 
-                row['stop_code'],
-                row['stop_name'],
-                row['stop_desc'],
-                row['stop_lat'],
-                row['stop_lon'],
-                row['zone_id'],
-                row['stop_url'],
-                row['location_type'],
-                row['parent_station'],
-                update_time
+            ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});""".format(
+                wrap_text(row['stop_id']), 
+                wrap_text(row['stop_code']),
+                wrap_text(row['stop_name'], q = '"'),
+                wrap_text(row['stop_desc']),
+                wrap_text(row['stop_lat'], q = ''),
+                wrap_text(row['stop_lon'], q = ''),
+                wrap_text(row['zone_id']),
+                wrap_text(row['stop_url']),
+                wrap_text(row['location_type']),
+                wrap_text(row['parent_station']),
+                wrap_text(update_time)
             )
             cursor.execute(sql_command)
         connection.commit()
@@ -125,7 +128,7 @@ class GTFS_Ingestor:
         route_id TEXT NOT NULL, 
         stop_id TEXT NOT NULL,
         direction_id TEXT NOT NULL,
-        schedule_relationship INTEGER NOT NULL,
+        schedule_relationship INTEGER,
         arrival_time INTEGER,
         departure_time INTEGER,
         load_ts TEXT NOT NULL,
@@ -139,6 +142,8 @@ class GTFS_Ingestor:
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         update_time = datetime.datetime.now()
+        
+        def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
 
         for entity in self._trip_updates:
             for stu in entity.trip_update.stop_time_update:
@@ -154,18 +159,18 @@ class GTFS_Ingestor:
                 departure_time, 
                 load_ts, 
                 update_ts
-                ) VALUES ({}, '{}', '{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}');""".format(
+                ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});""".format(
                     int(entity.id), 
-                    entity.trip_update.trip.trip_id,
-                    datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d'),
-                    entity.trip_update.trip.route_id, 
-                    stu.stop_id, 
-                    stu.stop_id[-1], 
-                    stu.schedule_relationship, 
-                    stu.arrival.time if stu.arrival.time > 0 else 'NULL', 
-                    stu.departure.time if stu.departure.time > 0 else 'NULL',
-                    self._header.timestamp,
-                    update_time
+                    wrap_text(entity.trip_update.trip.trip_id),
+                    wrap_text(datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d')),
+                    wrap_text(entity.trip_update.trip.route_id), 
+                    wrap_text(stu.stop_id), 
+                    wrap_text(stu.stop_id[-1]), 
+                    wrap_text(stu.schedule_relationship, q = ''), 
+                    wrap_text(stu.arrival.time, q = ''), 
+                    wrap_text(stu.departure.time, q = ''),
+                    wrap_text(self._header.timestamp, q = ''),
+                    wrap_text(update_time)
                 )
                 cursor.execute(sql_command)
 
