@@ -237,7 +237,7 @@ class GTFS_Ingestor:
         
     def update_feed_tables(self, feed_ids, replace = False):
         if replace:
-            del self._feed
+            del self._header
             self._initialize_vehicles_table()
             self._initialize_trip_updates_table()
         if hasattr(self, '_header') and time.time() - self._header.timestamp < self._feed_freq:
