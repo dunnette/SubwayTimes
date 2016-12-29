@@ -29,7 +29,6 @@ class GTFS_Ingestor:
         response = urllib.urlopen('{}?{}'.format(self._endpoint_url, payload))
         self._feed = gtfs_realtime_pb2.FeedMessage()
         self._feed.ParseFromString(response.read())
-        self._feed_update_ts = datetime.datetime.now()
         
     def _split_feed(self):
         self._trip_updates = [tu for tu in self._feed.entity if tu.HasField('trip_update')]
@@ -230,10 +229,12 @@ class GTFS_Ingestor:
         connection.commit()
         connection.close()
         
-    def update_feed_tables(self, feed_id, replace = False):
+    def update_feed_tables(self, feed_ids, replace = False):
         if replace:
             self.initialize_vehicles_table()
             self._initialize_trip_updates_table()
-        self._initialize_feed(feed_id)
-        self._populate_vehicles_table()
-        self._populate_trip_updates_table()
+        self._feed_update_ts = datetime.datetime.now()
+        for feed_id in feed_ids:
+            self._initialize_feed(feed_id)
+            self._populate_vehicles_table()
+            self._populate_trip_updates_table()
