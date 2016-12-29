@@ -14,13 +14,13 @@ class GTFS_Ingestor:
     def __init__(self, key_str, regen_stops = False, regen_trip_updates = False, regen_vehicles = False):
         self._key_str = key_str
         if regen_stops:
-            self.initialize_stops_table()
+            self._initialize_stops_table()
         if regen_trip_updates:
-            self.initialize_trip_updates_table()
+            self._initialize_trip_updates_table()
         if regen_vehicles:
-            self.initialize_vehicles_table()
+            self._initialize_vehicles_table()
     
-    def initialize_feed(self, feed_id = 2):
+    def _initialize_feed(self, feed_id):
         self._load_feed(feed_id)
         self._split_feed()
     
@@ -43,13 +43,12 @@ class GTFS_Ingestor:
         connection.commit()
         connection.close()
         
-    def initialize_stops_table(self):
+    def _initialize_stops_table(self):
         try:
             self._drop_table('stops')
         except:
             pass
         self._create_stops_table()
-        self._populate_stops_table()
     
     def _create_stops_table(self):
         connection = sqlite3.connect(self._sqlite_db)
@@ -110,14 +109,17 @@ class GTFS_Ingestor:
             cursor.execute(sql_command)
         connection.commit()
         connection.close()
+        
+    def update_stops_table(self):
+        self._initialize_stops_table()
+        self._populate_stops_table()
     
-    def initialize_vehicles_table(self):
+    def _initialize_vehicles_table(self):
         try:
             self._drop_table('vehicles')
         except:
             pass
         self._create_vehicles_table()
-        self._populate_vehicles_table()
         
     def _create_vehicles_table(self):
         connection = sqlite3.connect(self._sqlite_db)
@@ -138,13 +140,10 @@ class GTFS_Ingestor:
         connection.close()
         
     def _populate_vehicles_table(self):
-        self.initialize_feed()
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         update_time = datetime.datetime.now()
-        
         def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
-        
         for entity in self._vehicles:
             sql_command = """INSERT INTO vehicles (
             entity_id, 
@@ -168,23 +167,15 @@ class GTFS_Ingestor:
                 wrap_text(update_time)
             )
             cursor.execute(sql_command)
-
         connection.commit()
         connection.close()
-        
-    def update_vehicles_table(self, replace = False):
-        if replace:
-            self.initialize_vehicles_table()
-        else:
-            self._populate_vehicles_table()
 
-    def initialize_trip_updates_table(self):
+    def _initialize_trip_updates_table(self):
         try:
             self._drop_table('trip_updates')
         except:
             pass
         self._create_trip_updates_table()
-        self._populate_trip_updates_table()
             
     def _create_trip_updates_table(self):
         connection = sqlite3.connect(self._sqlite_db)
@@ -207,13 +198,10 @@ class GTFS_Ingestor:
         connection.close()
         
     def _populate_trip_updates_table(self):
-        self.initialize_feed()
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         update_time = datetime.datetime.now()
-        
         def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
-
         for entity in self._trip_updates:
             for stu in entity.trip_update.stop_time_update:
                 sql_command = """INSERT INTO trip_updates (
@@ -242,12 +230,13 @@ class GTFS_Ingestor:
                     wrap_text(update_time)
                 )
                 cursor.execute(sql_command)
-
         connection.commit()
         connection.close()
         
-    def update_trip_updates_table(self, replace = False):
+    def update_feed_tables(self, feed_id, replace = False):
         if replace:
-            self.initialize_trip_updates_table()
-        else:
-            self._populate_trip_updates_table()
+            self.initialize_vehicles_table()
+            self._initialize_trip_updates_table()
+        self._initialize_feed(feed_id)
+        self._populate_vehicles_table()
+        self._populate_trip_updates_table()
