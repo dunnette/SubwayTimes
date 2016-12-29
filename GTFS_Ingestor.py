@@ -79,6 +79,7 @@ class GTFS_Ingestor:
         url = urllib.urlopen(self._static_data_url)
         f = StringIO.StringIO(url.read())
         reader = csv.DictReader(zipfile.ZipFile(f).open('stops.txt'))
+        self._stops_update_ts = datetime.datetime.now()
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
@@ -106,7 +107,7 @@ class GTFS_Ingestor:
                 wrap_text(row['stop_url']),
                 wrap_text(row['location_type']),
                 wrap_text(row['parent_station']),
-                wrap_text(self._feed_update_ts)
+                wrap_text(self._stops_update_ts)
             )
             cursor.execute(sql_command)
         connection.commit()
@@ -236,10 +237,14 @@ class GTFS_Ingestor:
         
     def update_feed_tables(self, feed_ids, replace = False):
         if replace:
-            self.initialize_vehicles_table()
+            del self._feed
+            self._initialize_vehicles_table()
             self._initialize_trip_updates_table()
-        self._feed_update_ts = datetime.datetime.now()
-        for feed_id in feed_ids:
-            self._initialize_feed(feed_id)
-            self._populate_vehicles_table()
-            self._populate_trip_updates_table()
+        if hasattr(self, '_header') and time.time() - self._header.timestamp < self._feed_freq:
+            pass
+        else:
+            self._feed_update_ts = datetime.datetime.now()
+            for feed_id in feed_ids:
+                self._initialize_feed(feed_id)
+                self._populate_vehicles_table()
+                self._populate_trip_updates_table()
