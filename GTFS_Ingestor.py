@@ -29,6 +29,7 @@ class GTFS_Ingestor:
         response = urllib.urlopen('{}?{}'.format(self._endpoint_url, payload))
         self._feed = gtfs_realtime_pb2.FeedMessage()
         self._feed.ParseFromString(response.read())
+        self._feed_update_ts = datetime.datetime.now()
         
     def _split_feed(self):
         self._trip_updates = [tu for tu in self._feed.entity if tu.HasField('trip_update')]
@@ -76,10 +77,7 @@ class GTFS_Ingestor:
         reader = csv.DictReader(zipfile.ZipFile(f).open('stops.txt'))
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        update_time = datetime.datetime.now()
-        
         def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
-        
         for row in reader:
             sql_command = """INSERT INTO stops (
             stop_id,
@@ -104,7 +102,7 @@ class GTFS_Ingestor:
                 wrap_text(row['stop_url']),
                 wrap_text(row['location_type']),
                 wrap_text(row['parent_station']),
-                wrap_text(update_time)
+                wrap_text(self._feed_update_ts)
             )
             cursor.execute(sql_command)
         connection.commit()
@@ -142,7 +140,6 @@ class GTFS_Ingestor:
     def _populate_vehicles_table(self):
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        update_time = datetime.datetime.now()
         def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
         for entity in self._vehicles:
             sql_command = """INSERT INTO vehicles (
@@ -164,7 +161,7 @@ class GTFS_Ingestor:
                 entity.vehicle.current_status, 
                 wrap_text(entity.vehicle.timestamp, q = ''),
                 wrap_text(self._header.timestamp, q = ''),
-                wrap_text(update_time)
+                wrap_text(self._feed_update_ts)
             )
             cursor.execute(sql_command)
         connection.commit()
