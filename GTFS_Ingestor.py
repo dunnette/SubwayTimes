@@ -1,6 +1,7 @@
 from google.transit import gtfs_realtime_pb2
 import urllib
 import datetime
+import time
 import zipfile
 import StringIO
 import csv
@@ -10,6 +11,7 @@ class GTFS_Ingestor:
     _endpoint_url = 'http://datamine.mta.info/mta_esi.php'
     _static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
     _sqlite_db = 'subway_status.db'
+    _feed_freq = 30
     
     def __init__(self, key_str, regen_stops = False, regen_trip_updates = False, regen_vehicles = False):
         self._key_str = key_str
@@ -21,8 +23,11 @@ class GTFS_Ingestor:
             self._initialize_vehicles_table()
     
     def _initialize_feed(self, feed_id):
-        self._load_feed(feed_id)
-        self._split_feed()
+        if hasattr(self, '_header') and time.time() - self._header.timestamp < self._feed_freq:
+            pass
+        else:
+            self._load_feed(feed_id)
+            self._split_feed()
     
     def _load_feed(self, feed_id_int):
         payload  = urllib.urlencode({'key': self._key_str, 'feed_id': feed_id_int})
