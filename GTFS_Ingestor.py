@@ -27,7 +27,7 @@ class GTFS_Ingestor:
             pass
         else:
             self._load_feed(feed_id)
-            self._split_feed()
+        self._split_feed()
     
     def _load_feed(self, feed_id_int):
         payload  = urllib.urlencode({'key': self._key_str, 'feed_id': feed_id_int})
