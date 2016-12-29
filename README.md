@@ -40,9 +40,19 @@ Get next stop time
 r.get_next_stop_time('212S')
 ```
 
-Find three closest stations
+Get ten closest stations
 ```python
-[r.get_stop_name(s[0]) for s in r.get_closest_stations((40.752320, -74.006836), n = 3)]
+r.get_closest_stations((40.752320, -74.006836))
+```
+
+Get stop name
+```python
+r.get_stop_name('212S')
+```
+
+Get stop ids
+```python
+r.get_stop_ids('Bronx Park East')
 ```
 
 ## Reference
