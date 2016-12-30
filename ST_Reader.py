@@ -24,7 +24,7 @@ class ST_Reader:
         sql_command = "select distinct stop_id from trip_updates where route_id in ('{}');".format("','".join(routes))
         return [row[0] for row in self._query_dbase(sql_command)]
     
-    def get_stop_times(self, stop_ids, arrival_or_departure = 'depature'):
+    def get_stop_times(self, stop_ids, arrival_or_departure = 'departure'):
         sql_command = "select {}_time from trip_updates where stop_id in ('{}') and update_ts = '{}';".format(arrival_or_departure, "','".join(stop_ids), self.get_last_update('trip_updates'))
         return [datetime.datetime.fromtimestamp(row[0]) for row in self._query_dbase(sql_command)]
     
