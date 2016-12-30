@@ -104,7 +104,7 @@ class Ingestor:
                 wrap_text(row['stop_url']),
                 wrap_text(row['location_type']),
                 wrap_text(row['parent_station']),
-                wrap_text(self._feed_update_ts)
+                wrap_text(self._stops_update_ts)
             )
             cursor.execute(sql_command)
         connection.commit()
@@ -199,7 +199,6 @@ class Ingestor:
     def _populate_trip_updates_table(self):
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        update_time = datetime.datetime.now()
         def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
         for entity in self._trip_updates:
             for stu in entity.trip_update.stop_time_update:
@@ -226,7 +225,7 @@ class Ingestor:
                     wrap_text(stu.arrival.time, q = ''), 
                     wrap_text(stu.departure.time, q = ''),
                     wrap_text(self._header.timestamp, q = ''),
-                    wrap_text(update_time)
+                    wrap_text(self._feed_update_ts)
                 )
                 cursor.execute(sql_command)
         connection.commit()
