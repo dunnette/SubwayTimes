@@ -1,7 +1,7 @@
 import sqlite3
 import datetime
 
-class ST_Reader:
+class Reader:
     _sqlite_db = 'subway_status.db'
     
     def _query_dbase(self, q, a = ''):
