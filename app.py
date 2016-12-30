@@ -1,8 +1,7 @@
-#!//anaconda/envs/py27/bin/python
-import flask
 import ST_Reader
+import flask
 
-r = ST_Reader.ST_Reader()
+r = ST_Reader.Reader()
 
 app = flask.Flask(__name__)
 
