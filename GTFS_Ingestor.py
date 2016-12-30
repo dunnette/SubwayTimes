@@ -93,7 +93,8 @@ class Ingestor:
             location_type,
             parent_station,
             update_ts
-            ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});""".format(
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
+            args = (
                 wrap_text(row['stop_id']), 
                 wrap_text(row['stop_code']),
                 wrap_text(row['stop_name'], q = '"'),
@@ -104,9 +105,8 @@ class Ingestor:
                 wrap_text(row['stop_url']),
                 wrap_text(row['location_type']),
                 wrap_text(row['parent_station']),
-                wrap_text(self._stops_update_ts)
-            )
-            cursor.execute(sql_command)
+                wrap_text(self._stops_update_ts))
+            cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
         
@@ -154,7 +154,8 @@ class Ingestor:
             status_update_time, 
             load_ts, 
             update_ts
-            ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {});""".format(
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"""
+            args = (
                 int(entity.id), 
                 wrap_text(entity.vehicle.trip.trip_id),
                 wrap_text(datetime.datetime.strptime(entity.vehicle.trip.start_date,'%Y%m%d')),
@@ -163,9 +164,8 @@ class Ingestor:
                 entity.vehicle.current_status, 
                 wrap_text(entity.vehicle.timestamp, q = ''),
                 wrap_text(self._header.timestamp, q = ''),
-                wrap_text(self._feed_update_ts)
-            )
-            cursor.execute(sql_command)
+                wrap_text(self._feed_update_ts))
+            cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
 
@@ -214,7 +214,8 @@ class Ingestor:
                 departure_time, 
                 load_ts, 
                 update_ts
-                ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});""".format(
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
+                args = (
                     int(entity.id), 
                     wrap_text(entity.trip_update.trip.trip_id),
                     wrap_text(datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d')),
@@ -227,7 +228,7 @@ class Ingestor:
                     wrap_text(self._header.timestamp, q = ''),
                     wrap_text(self._feed_update_ts)
                 )
-                cursor.execute(sql_command)
+                cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
         
