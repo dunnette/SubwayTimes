@@ -104,7 +104,7 @@ class Ingestor:
                 wrap_text(row['stop_url']),
                 wrap_text(row['location_type']),
                 wrap_text(row['parent_station']),
-                wrap_text(self._stops_update_ts)
+                wrap_text(self._feed_update_ts)
             )
             cursor.execute(sql_command)
         connection.commit()
