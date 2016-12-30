@@ -4,17 +4,19 @@ import datetime
 class ST_Reader:
     _sqlite_db = 'subway_status.db'
     
-    def _query_dbase(self, q):
+    def _query_dbase(self, q, a = ''):
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        cursor.execute(q)
+        cursor.execute(q, a)
         result = cursor.fetchall()
         connection.close()
         return result
     
     def get_last_update(self, table):
-        sql_command = "select max(update_ts) from {};".format(table)
-        return [row[0] for row in self._query_dbase(sql_command)][0]
+        if table in ['stops', 'trip_updates', 'vehicles']:
+            sql_command = "select max(update_ts) from {};".format(table)
+            return [row[0] for row in self._query_dbase(sql_command)][0]
+        return []
     
     def get_routes(self):
         sql_command = "select distinct route_id from trip_updates;"
@@ -32,13 +34,13 @@ class ST_Reader:
         return sorted(self.get_stop_times([stop_id]))[0]
     
     def get_closest_stations(self, lat_lon, n = 10):
-        sql_command = "select distinct stop_id from stops where parent_station is null order by abs((stop_lat - {lat}) * (stop_lat - {lat}) + (stop_lon - {lon}) * (stop_lon - {lon})) limit {lim};".format(lat = lat_lon[0], lon=lat_lon[1], lim = n)
-        return [row[0] for row in self._query_dbase(sql_command)]
+        sql_command = "select distinct stop_id from stops where parent_station is null order by abs((stop_lat - ?) * (stop_lat - ?) + (stop_lon - ?) * (stop_lon - ?)) limit ?;"
+        return [row[0] for row in self._query_dbase(sql_command, a = (lat_lon[0], lat_lon[0], lat_lon[1], lat_lon[1], n))]
     
     def get_stop_name(self, stop_id):
-        sql_command = "select distinct stop_name from stops where stop_id = '{}';".format(stop_id)
-        return [row[0] for row in self._query_dbase(sql_command)]
+        sql_command = "select distinct stop_name from stops where stop_id = ?;"
+        return [row[0] for row in self._query_dbase(sql_command, a = (stop_id,))]
         
     def get_stop_ids(self, stop_name):
-        sql_command = "select distinct stop_id from stops where stop_name = '{}';".format(stop_name)
-        return [row[0] for row in self._query_dbase(sql_command)]
+        sql_command = "select distinct stop_id from stops where stop_name = ?;"
+        return [row[0] for row in self._query_dbase(sql_command, a = (stop_name,))]
