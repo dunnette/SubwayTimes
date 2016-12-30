@@ -23,10 +23,7 @@ class Ingestor:
             self._initialize_vehicles_table()
     
     def _initialize_feed(self, feed_id):
-        if hasattr(self, '_header') and time.time() - self._header.timestamp < self._feed_freq:
-            pass
-        else:
-            self._load_feed(feed_id)
+        self._load_feed(feed_id)
         self._split_feed()
     
     def _load_feed(self, feed_id_int):
