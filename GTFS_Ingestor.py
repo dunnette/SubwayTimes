@@ -61,11 +61,11 @@ class Ingestor:
         stop_code TEXT,
         stop_name TEXT NOT NULL,
         stop_desc TEXT,
-        stop_lat REAL,
-        stop_lon REAL,
+        stop_lat REAL NOT NULL,
+        stop_lon REAL NOT NULL,
         zone_id TEXT,
         stop_url TEXT,
-        location_type TEXT,
+        location_type TEXT NOT NULL,
         parent_station TEXT,
         update_ts TEXT NOT NULL);"""
         cursor.execute(sql_command)
@@ -79,7 +79,6 @@ class Ingestor:
         self._stops_update_ts = datetime.datetime.now()
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
         for row in reader:
             sql_command = """INSERT INTO stops (
             stop_id,
@@ -95,17 +94,17 @@ class Ingestor:
             update_ts
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
             args = (
-                wrap_text(row['stop_id']), 
-                wrap_text(row['stop_code']),
-                wrap_text(row['stop_name'], q = '"'),
-                wrap_text(row['stop_desc']),
-                wrap_text(row['stop_lat'], q = ''),
-                wrap_text(row['stop_lon'], q = ''),
-                wrap_text(row['zone_id']),
-                wrap_text(row['stop_url']),
-                wrap_text(row['location_type']),
-                wrap_text(row['parent_station']),
-                wrap_text(self._stops_update_ts))
+                row['stop_id'], 
+                row['stop_code'],
+                row['stop_name'],
+                row['stop_desc'],
+                row['stop_lat'],
+                row['stop_lon'],
+                row['zone_id'],
+                row['stop_url'],
+                row['location_type'],
+                row['parent_station'],
+                self._stops_update_ts)
             cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
@@ -142,7 +141,6 @@ class Ingestor:
     def _populate_vehicles_table(self):
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
         for entity in self._vehicles:
             sql_command = """INSERT INTO vehicles (
             entity_id, 
@@ -156,15 +154,15 @@ class Ingestor:
             update_ts
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"""
             args = (
-                int(entity.id), 
-                wrap_text(entity.vehicle.trip.trip_id),
-                wrap_text(datetime.datetime.strptime(entity.vehicle.trip.start_date,'%Y%m%d')),
-                wrap_text(entity.vehicle.trip.route_id), 
+                entity.id, 
+                entity.vehicle.trip.trip_id,
+                datetime.datetime.strptime(entity.vehicle.trip.start_date,'%Y%m%d'),
+                entity.vehicle.trip.route_id, 
                 entity.vehicle.current_stop_sequence, 
                 entity.vehicle.current_status, 
-                wrap_text(entity.vehicle.timestamp, q = ''),
-                wrap_text(self._header.timestamp, q = ''),
-                wrap_text(self._feed_update_ts))
+                entity.vehicle.timestamp,
+                self._header.timestamp,
+                self._feed_update_ts)
             cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
@@ -199,7 +197,6 @@ class Ingestor:
     def _populate_trip_updates_table(self):
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
-        def wrap_text(s, q = "'"): return '{}{}{}'.format(q,s,q) if s else 'NULL'
         for entity in self._trip_updates:
             for stu in entity.trip_update.stop_time_update:
                 sql_command = """INSERT INTO trip_updates (
@@ -216,18 +213,17 @@ class Ingestor:
                 update_ts
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
                 args = (
-                    int(entity.id), 
-                    wrap_text(entity.trip_update.trip.trip_id),
-                    wrap_text(datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d')),
-                    wrap_text(entity.trip_update.trip.route_id), 
-                    wrap_text(stu.stop_id), 
-                    wrap_text(stu.stop_id[-1]), 
+                    entity.id, 
+                    entity.trip_update.trip.trip_id,
+                    datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d'),
+                    entity.trip_update.trip.route_id, 
+                    stu.stop_id, 
+                    stu.stop_id[-1], 
                     stu.schedule_relationship, 
-                    wrap_text(stu.arrival.time, q = ''), 
-                    wrap_text(stu.departure.time, q = ''),
-                    wrap_text(self._header.timestamp, q = ''),
-                    wrap_text(self._feed_update_ts)
-                )
+                    stu.arrival.time, 
+                    stu.departure.time,
+                    self._header.timestamp,
+                    self._feed_update_ts)
                 cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
