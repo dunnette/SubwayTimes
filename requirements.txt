@@ -1,0 +1,3 @@
+ST
+Flask>=0.10.1
+gtfs-realtime-bindings>=0.0.4
