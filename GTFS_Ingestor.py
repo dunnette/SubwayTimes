@@ -7,7 +7,7 @@ import StringIO
 import csv
 import sqlite3
 
-class GTFS_Ingestor:
+class Ingestor:
     _endpoint_url = 'http://datamine.mta.info/mta_esi.php'
     _static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
     _sqlite_db = 'subway_status.db'
