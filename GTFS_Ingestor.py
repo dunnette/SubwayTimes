@@ -237,7 +237,7 @@ class Ingestor:
             del self._header
             self._initialize_vehicles_table()
             self._initialize_trip_updates_table()
-        if hasattr(self, '_header') and time.time() - self._header.timestamp < self._feed_freq:
+        if self.is_feed_stale():
             pass
         else:
             self._feed_update_ts = datetime.datetime.now()
@@ -246,6 +246,9 @@ class Ingestor:
                 self._populate_vehicles_table()
                 self._populate_trip_updates_table()
             self._clean_feed_table()
+
+    def is_feed_stale(self):
+        return hasattr(self, '_header') and time.time() - self._header.timestamp < self._feed_freq
 
     def _clean_feed_table(self):
         oldest_record = time.time() - self._persist_limit
