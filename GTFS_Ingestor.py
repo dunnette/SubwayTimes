@@ -11,7 +11,8 @@ class Ingestor:
     _endpoint_url = 'http://datamine.mta.info/mta_esi.php'
     _static_data_url = 'http://web.mta.info/developers/data/nyct/subway/google_transit.zip'
     _sqlite_db = 'subway_status.db'
-    _feed_freq = 30
+    _feed_freq = 60
+    _persist_limit = 5*60
     
     def __init__(self, key_str, regen_stops = False, regen_trip_updates = False, regen_vehicles = False):
         self._key_str = key_str
@@ -77,6 +78,7 @@ class Ingestor:
         f = StringIO.StringIO(url.read())
         reader = csv.DictReader(zipfile.ZipFile(f).open('stops.txt'))
         self._stops_update_ts = datetime.datetime.now()
+        def wrap_text(s): return s if s else None
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         for row in reader:
@@ -94,16 +96,16 @@ class Ingestor:
             update_ts
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
             args = (
-                row['stop_id'], 
-                row['stop_code'],
-                row['stop_name'],
-                row['stop_desc'],
-                row['stop_lat'],
-                row['stop_lon'],
-                row['zone_id'],
-                row['stop_url'],
-                row['location_type'],
-                row['parent_station'],
+                wrap_text(row['stop_id']),
+                wrap_text(row['stop_code']),
+                wrap_text(row['stop_name']),
+                wrap_text(row['stop_desc']),
+                wrap_text(row['stop_lat']),
+                wrap_text(row['stop_lon']),
+                wrap_text(row['zone_id']),
+                wrap_text(row['stop_url']),
+                wrap_text(row['location_type']),
+                wrap_text(row['parent_station']),
                 self._stops_update_ts)
             cursor.execute(sql_command, args)
         connection.commit()
@@ -139,6 +141,7 @@ class Ingestor:
         connection.close()
         
     def _populate_vehicles_table(self):
+        def wrap_text(s): return s if s else None
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         for entity in self._vehicles:
@@ -154,13 +157,13 @@ class Ingestor:
             update_ts
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"""
             args = (
-                entity.id, 
-                entity.vehicle.trip.trip_id,
-                datetime.datetime.strptime(entity.vehicle.trip.start_date,'%Y%m%d'),
-                entity.vehicle.trip.route_id, 
+                wrap_text(entity.id), 
+                wrap_text(entity.vehicle.trip.trip_id),
+                wrap_text(datetime.datetime.strptime(entity.vehicle.trip.start_date,'%Y%m%d')),
+                wrap_text(entity.vehicle.trip.route_id), 
                 entity.vehicle.current_stop_sequence, 
                 entity.vehicle.current_status, 
-                entity.vehicle.timestamp,
+                wrap_text(entity.vehicle.timestamp),
                 self._header.timestamp,
                 self._feed_update_ts)
             cursor.execute(sql_command, args)
@@ -195,6 +198,7 @@ class Ingestor:
         connection.close()
         
     def _populate_trip_updates_table(self):
+        def wrap_text(s): return s if s else None
         connection = sqlite3.connect(self._sqlite_db)
         cursor = connection.cursor()
         for entity in self._trip_updates:
@@ -213,21 +217,21 @@ class Ingestor:
                 update_ts
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
                 args = (
-                    entity.id, 
-                    entity.trip_update.trip.trip_id,
-                    datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d'),
-                    entity.trip_update.trip.route_id, 
-                    stu.stop_id, 
-                    stu.stop_id[-1], 
+                    wrap_text(entity.id),
+                    wrap_text(entity.trip_update.trip.trip_id),
+                    wrap_text(datetime.datetime.strptime(entity.trip_update.trip.start_date,'%Y%m%d')),
+                    wrap_text(entity.trip_update.trip.route_id), 
+                    wrap_text(stu.stop_id),
+                    wrap_text(stu.stop_id[-1]), 
                     stu.schedule_relationship, 
-                    stu.arrival.time, 
-                    stu.departure.time,
+                    wrap_text(stu.arrival.time), 
+                    wrap_text(stu.departure.time),
                     self._header.timestamp,
                     self._feed_update_ts)
                 cursor.execute(sql_command, args)
         connection.commit()
         connection.close()
-        
+
     def update_feed_tables(self, feed_ids, replace = False):
         if replace:
             del self._header
@@ -241,3 +245,13 @@ class Ingestor:
                 self._initialize_feed(feed_id)
                 self._populate_vehicles_table()
                 self._populate_trip_updates_table()
+            self._clean_feed_table()
+
+    def _clean_feed_table(self):
+        oldest_record = time.time() - self._persist_limit
+        connection = sqlite3.connect(self._sqlite_db)
+        cursor = connection.cursor()
+        cursor.execute('DELETE FROM trip_updates WHERE load_ts < ?', (oldest_record,))
+        cursor.execute('DELETE FROM vehicles WHERE load_ts < ?', (oldest_record,))
+        connection.commit()
+        connection.close()
