@@ -5,6 +5,10 @@ r = ST_Reader.Reader()
 
 application = flask.Flask(__name__)
 
+@application.route('/')
+def hello():         
+	return "Welcome to ST API"
+
 @application.route('/routes', methods=['GET'])
 def get_routes():
     return flask.jsonify({'data': r.get_routes(), 'update': r.get_last_update('trip_updates')})
